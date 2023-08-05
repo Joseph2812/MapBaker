@@ -87,12 +87,12 @@ class BakeMaps(bpy.types.Operator):
         return {'FINISHED'}
     
     def try_init(self, context) -> bool:
-        if context.active_object is None:
+        if len(context.selected_objects) == 0:
             self.show_message_box(context, "Error", "No object is selected", 'ERROR')
             return False
         
         if context.active_object.data.uv_layers.active is None:
-            self.show_message_box(context, "Error", "No UV layer is selected", 'ERROR')
+            self.show_message_box(context, "Error", "No UV map/layer is selected", 'ERROR')
             return False
         
         context.view_layer.objects.active = context.active_object
