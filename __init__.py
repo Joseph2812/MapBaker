@@ -1,4 +1,3 @@
-import bpy
 import sys
 import importlib
 
@@ -6,14 +5,11 @@ import importlib
 MODULE_NAMES = ["map_baker_panel", "properties", "bake_maps"]
 modules = []
 
-for module_name in MODULE_NAMES: 
+for module_name in MODULE_NAMES:
     module_full_name = ("{}.{}".format(__name__, module_name))
     
     if module_full_name in sys.modules:
-        module = sys.modules[module_full_name]       
-        importlib.reload(module)
-        
-        modules.append(module)
+        modules.append(importlib.reload(sys.modules[module_full_name]))
     else:
         modules.append(importlib.import_module(module_full_name))
 #
@@ -22,7 +18,7 @@ bl_info = {
     "name"       : "Map Baker",
     "description": "Streamline baking & saving all of the individual maps",
     "author"     : "Joseph Murphy",
-    "version"    : (1, 0),
+    "version"    : (1, 1),
     "blender"    : (3, 5, 0),
     "location"   : "Image Editor > Toolbox",
     "category"   : "Object",

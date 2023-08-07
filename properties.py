@@ -36,13 +36,22 @@ class Properties(bpy.types.PropertyGroup):
     (
         name        = "Width",
         description = "",
-        default     = 1024
+        default     = 1024,
+        min         = 1
     )
     height: bpy.props.IntProperty \
     (
         name        = "Height",
         description = "",
-        default     = 1024
+        default     = 1024,
+        min         = 1
+    )
+    samples: bpy.props.IntProperty \
+    (
+        name        = "Samples",
+        description = "Number of samples to render for each pixel",
+        default     = 256,
+        min         = 1
     )
     
 def register():

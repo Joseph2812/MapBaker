@@ -94,6 +94,10 @@ class BakeMaps(bpy.types.Operator):
         if context.active_object.data.uv_layers.active is None:
             self.show_message_box(context, "Error", "No UV map/layer is selected", 'ERROR')
             return False
+
+        if not os.path.isdir(bpy.path.abspath(context.scene.map_baker.save_dir)):
+            self.show_message_box(context, "Error", "Save directory is invalid", 'ERROR')
+            return False
         
         context.view_layer.objects.active = context.active_object
         
@@ -120,7 +124,7 @@ class BakeMaps(bpy.types.Operator):
         context.scene.render.bake.use_pass_direct   = False
         context.scene.render.bake.use_pass_indirect = False
         context.scene.cycles.use_adaptive_sampling  = False
-        context.scene.cycles.samples                = 1
+        context.scene.cycles.samples                = context.scene.map_baker.samples
         context.scene.cycles.use_denoising          = False
         
         # Store & Set Output Properties #

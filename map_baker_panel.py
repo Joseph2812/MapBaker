@@ -18,11 +18,12 @@ class MapBakerPanel(bpy.types.Panel):
         column.label(text="Output Settings:")
         column.prop(mb, "save_diffuse_alpha")
         column.prop(mb, "save_dir")
-        
+
         row = column.row()
         row.prop(mb, "width")
         row.prop(mb, "height")
-        
+
+        column.prop(mb, "samples")
         column.operator("map_baker.bake_maps", icon='OUTPUT')
         
 def register():
