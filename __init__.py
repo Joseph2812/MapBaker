@@ -18,7 +18,7 @@ bl_info = {
     "name"       : "Map Baker",
     "description": "Streamline baking & saving all of the individual maps",
     "author"     : "Joseph Murphy",
-    "version"    : (1, 1),
+    "version"    : (1, 1, 1),
     "blender"    : (3, 5, 0),
     "location"   : "Image Editor > Toolbox",
     "category"   : "Object",
