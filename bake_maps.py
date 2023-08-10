@@ -1,6 +1,5 @@
 import bpy
 import os
-import time
 import numpy as np
 
 class BakeMaps(bpy.types.Operator):
@@ -175,7 +174,7 @@ class BakeMaps(bpy.types.Operator):
         context.scene.render.image_settings.color_depth = self.old_color_depth
         context.scene.render.image_settings.compression = self.old_compression
         
-    def show_message_box(self, context, title="Message Box", text="", icon='INFO'):
+    def show_message_box(self, context, title:str="Message Box", text:str="", icon:str='INFO'):
 
         def draw(self, context):
             self.layout.label(text=text)
