@@ -14,6 +14,7 @@ class MapBakerPanel(bpy.types.Panel):
         column.prop(mb, "use_diffuse")
         column.prop(mb, "use_orm")
         column.prop(mb, "use_emission")
+        column.prop(mb, "use_normal")
         column.split()
         column.label(text="Output Settings:")
         column.prop(mb, "save_diffuse_alpha")
@@ -23,7 +24,7 @@ class MapBakerPanel(bpy.types.Panel):
         row.prop(mb, "width")
         row.prop(mb, "height")
 
-        column.prop(mb, "samples")
+        column.prop(mb, "ao_samples")
         column.operator("map_baker.bake_maps", icon='OUTPUT')
         
 def register():

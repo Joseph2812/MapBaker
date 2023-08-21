@@ -19,6 +19,12 @@ class Properties(bpy.types.PropertyGroup):
         description = "",
         default     = False
     )
+    use_normal: bpy.props.BoolProperty \
+    (
+        name        = "Normal",
+        description = "",
+        default     = False
+    )
     save_diffuse_alpha: bpy.props.BoolProperty \
     (
         name        = "Save Diffuse Alpha",
@@ -46,16 +52,16 @@ class Properties(bpy.types.PropertyGroup):
         default     = 1024,
         min         = 1
     )
-    samples: bpy.props.IntProperty \
+    ao_samples: bpy.props.IntProperty \
     (
-        name        = "Samples",
-        description = "Number of samples to render for each pixel",
+        name        = "AO Samples",
+        description = "Number of samples to render for each pixel (> 1 needed for accurate light rendering of Ambient Occlusion)",
         default     = 256,
         min         = 1
     )
     
 def register():
-    bpy.utils.register_class(Properties)       
+    bpy.utils.register_class(Properties)
     bpy.types.Scene.map_baker = bpy.props.PointerProperty(type=Properties)
     
 def unregister():
