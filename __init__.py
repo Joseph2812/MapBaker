@@ -16,10 +16,10 @@ for module_name in MODULE_NAMES:
 
 bl_info = {
     "name"       : "Map Baker",
-    "description": "Streamline baking & saving all of the individual maps",
+    "description": "Streamline baking & saving all of the individual maps for an object",
     "author"     : "Joseph Murphy",
-    "version"    : (1, 2, 0),
-    "blender"    : (3, 5, 0),
+    "version"    : (1, 1, 2),
+    "blender"    : (4, 0, 0),
     "location"   : "Image Editor > Toolbox",
     "category"   : "Object",
 }

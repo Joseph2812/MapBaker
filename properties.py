@@ -67,4 +67,3 @@ def register():
 def unregister():
     bpy.utils.unregister_class(Properties)
     del bpy.types.Scene.map_baker
-    

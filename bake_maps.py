@@ -4,19 +4,20 @@ import numpy as np
 
 class BakeMaps(bpy.types.Operator):
     NODE_NAME:str = "BakeNode"
+    FINISHED_SET:set[str] = {'FINISHED'}
     
     bl_idname      = "map_baker.bake_maps"
     bl_label       = "Bake Maps"
     bl_description = "Bake & save each individual map that is ticked.\nUses the currently selected object & UV layer"
        
     # Render Properties #
-    __old_direct:bool
-    __old_indirect:bool
     __old_render_engine:str
+    __old_direct:bool
+    __old_indirect:bool   
     __old_adpt_sampling:bool
     __old_samples:int
     __old_use_denoising:bool
-    
+
     # Output Properties #
     __old_file_format:str
     __old_color_mode:str
@@ -26,90 +27,22 @@ class BakeMaps(bpy.types.Operator):
 
     __combine_channels = np.vectorize(lambda ao, r, m: (ao, r, m, 1.0), [tuple])
 
-    def __init__(self):
-        # Render Properties #
-        self.__old_render_engine:str
-        self.__old_direct:bool
-        self.__old_indirect:bool   
-        self.__old_adpt_sampling:bool
-        self.__old_samples:int
-        self.__old_use_denoising:bool
-
-        # Output Properties #
-        self.__old_file_format:str
-        self.__old_color_mode:str
-        self.__old_color_depth:str
-        self.__old_compression:int
-
     def invoke(self, context, event):
         if not self.__try_init(context):
-            return {'FINISHED'}
+            return self.FINISHED_SET
         
         mb = context.scene.map_baker
         abs_save_dir = bpy.path.abspath(mb.save_dir)
         
-        if mb.use_diffuse:                 
-            # Store & Set Metallic Value To 0 #
-            input_oldVal_s:list[tuple[any, float]] = []
-            for mat in context.active_object.data.materials:            
-                input = mat.node_tree.nodes["Principled BSDF"].inputs[6] # Metallic Index == 6
-             
-                input_oldVal_s.append((input, input.default_value))
-                input.default_value = 0.0
+        if mb.use_diffuse : self.__save_diffuse (context, abs_save_dir, mb)     
+        if mb.use_orm     : self.__save_orm     (context, abs_save_dir)                 
+        if mb.use_emission: self.__save_emission(context, abs_save_dir)    
+        if mb.use_normal  : self.__save_normal  (context, abs_save_dir)          
 
-            # Bake & Save #
-            img = self.__bake(context, 'DIFFUSE')
-
-            context.scene.render.image_settings.color_mode = 'RGBA' if mb.save_diffuse_alpha else 'RGB'
-            img.save_render(filepath=os.path.join(abs_save_dir, "Albedo.png"))
-
-            # Reset Metallic Value #
-            for input_oldVal in input_oldVal_s:
-                input_oldVal[0].default_value = input_oldVal[1]
-            #
-
-            bpy.data.images.remove(img)
-        
-        if mb.use_orm:
-            # Bake #
-            img_ao = self.__bake(context, 'AO'       , 'Non-Color', use_ao_samples=True)
-            img_r  = self.__bake(context, 'ROUGHNESS', 'Non-Color')
-            img_m  = self.__bake(context, 'GLOSSY'   , 'Non-Color')
-            
-            # Channel Pack The Maps #
-            every_4th = slice(None, None, 4)
-            pixels = self.__combine_channels(img_ao.pixels[:][every_4th], img_r.pixels[:][every_4th], img_m.pixels[:][every_4th])
-            img_ao.pixels = [x for t in pixels for x in t] # List of tuple[float * 4] -> List of float
-            
-            # Save #
-            context.scene.render.image_settings.color_mode = 'RGB'
-            img_ao.save_render(filepath=os.path.join(abs_save_dir, "ORM.png"))
-            #
-
-            bpy.data.images.remove(img_ao)
-            bpy.data.images.remove(img_r)
-            bpy.data.images.remove(img_m)
-            
-        if mb.use_emission:
-            img = self.__bake(context, 'EMIT', 'Non-Color')
-
-            context.scene.render.image_settings.color_mode = 'BW'
-            img.save_render(filepath=os.path.join(abs_save_dir, "Emission.png"))
-            
-            bpy.data.images.remove(img)
-        
-        if mb.use_normal:
-            img = self.__bake(context, 'NORMAL', 'Non-Color')
-
-            context.scene.render.image_settings.color_mode = 'RGB'
-            img.save_render(filepath=os.path.join(abs_save_dir, "Normal.png"))
-            
-            bpy.data.images.remove(img)
-
-        self.__show_message_box(context, "Done", "{0} has been baked to {1}".format(context.active_object.name, abs_save_dir))    
         self.__reset(context)
+        self.__show_message_box(context, "Done", "{0} has been baked to {1}".format(context.active_object.name, abs_save_dir))
         
-        return {'FINISHED'}
+        return self.FINISHED_SET
     
     def __try_init(self, context) -> bool:
         if len(context.selected_objects) == 0:
@@ -165,6 +98,77 @@ class BakeMaps(bpy.types.Operator):
         
         return True
     
+    def __save_diffuse(self, context, abs_save_dir, map_baker):
+        # Disable Metallic #
+        nodeTree_metallicFrom_metallicTo_oldToVal_s:list[tuple[any, float]] = []
+        for mat in context.active_object.data.materials:
+            for node in mat.node_tree.nodes:
+                try   : metallic_to = node.inputs["Metallic"]
+                except: continue
+
+                # Remove Metallic Link #
+                metallic_from = None
+                for link in mat.node_tree.links:
+                    if link.to_socket == metallic_to:
+                        metallic_from = link.from_socket
+                        mat.node_tree.links.remove(link)
+                        break
+                #
+
+                nodeTree_metallicFrom_metallicTo_oldToVal_s.append((mat.node_tree, metallic_from, metallic_to, metallic_to.default_value))
+                metallic_to.default_value = 0.0
+
+        # Bake & Save #
+        img = self.__bake(context, 'DIFFUSE')
+
+        context.scene.render.image_settings.color_mode = 'RGBA' if map_baker.save_diffuse_alpha else 'RGB'
+        img.save_render(filepath=os.path.join(abs_save_dir, "Albedo.png"))
+
+        bpy.data.images.remove(img)
+
+        # Reset Metallic Connection & Value #
+        for node_tree, m_from, m_to, old_to_val in nodeTree_metallicFrom_metallicTo_oldToVal_s:
+            if m_from != None:
+                node_tree.links.new(m_from, m_to)
+
+            m_to.default_value = old_to_val
+
+    def __save_orm(self, context, abs_save_dir):
+        # Bake #
+        img_ao = self.__bake(context, 'AO'       , 'Non-Color', use_ao_samples=True)
+        img_r  = self.__bake(context, 'ROUGHNESS', 'Non-Color')
+        img_m  = self.__bake(context, 'GLOSSY'   , 'Non-Color')
+        
+        # Channel Pack The Maps #
+        every_4th = slice(None, None, 4)
+        pixels = self.__combine_channels(img_ao.pixels[:][every_4th], img_r.pixels[:][every_4th], img_m.pixels[:][every_4th])
+        img_ao.pixels = [x for t in pixels for x in t] # List of tuple[float * 4] -> List of float
+        
+        # Save #
+        context.scene.render.image_settings.color_mode = 'RGB'
+        img_ao.save_render(filepath=os.path.join(abs_save_dir, "ORM.png"))
+        #
+
+        bpy.data.images.remove(img_ao)
+        bpy.data.images.remove(img_r)
+        bpy.data.images.remove(img_m)
+
+    def __save_emission(self, context, abs_save_dir):
+        img = self.__bake(context, 'EMIT', 'Non-Color')
+
+        context.scene.render.image_settings.color_mode = 'BW'
+        img.save_render(filepath=os.path.join(abs_save_dir, "Emission.png"))
+        
+        bpy.data.images.remove(img)
+
+    def __save_normal(self, context, abs_save_dir):
+        img = self.__bake(context, 'NORMAL', 'Non-Color')
+
+        context.scene.render.image_settings.color_mode = 'RGB'
+        img.save_render(filepath=os.path.join(abs_save_dir, "Normal.png"))
+        
+        bpy.data.images.remove(img)
+
     def __bake(self, context, map_type:str, color_space:str='sRGB', use_ao_samples:bool=False) -> bpy.types.Image:
         img = bpy.data.images.new \
         (
@@ -181,12 +185,12 @@ class BakeMaps(bpy.types.Operator):
         bpy.ops.object.bake(type=map_type, save_mode='EXTERNAL')
         
         return img
-            
+    
     def __reset(self, context):
         for mat in context.active_object.data.materials:
             mat.node_tree.nodes.remove(mat.node_tree.nodes.active)
         
-        # Reset Render Properties #  
+        # Reset Render Properties #
         context.scene.render.engine                 = self.__old_render_engine    
         context.scene.render.bake.use_pass_direct   = self.__old_direct
         context.scene.render.bake.use_pass_indirect = self.__old_indirect
@@ -202,7 +206,7 @@ class BakeMaps(bpy.types.Operator):
         
     def __show_message_box(self, context, title:str="Message Box", text:str="", icon:str='INFO'):
 
-        def draw(self, context):
+        def draw(self, _):
             self.layout.label(text=text)
 
         context.window_manager.popup_menu(draw, title=title, icon=icon)
